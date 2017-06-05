@@ -1,2 +1,2 @@
 # battle_walker
-test game for comming jrpg opus magnum
+test game for coming jrpg opus magnum
