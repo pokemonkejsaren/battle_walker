@@ -268,8 +268,15 @@ int main(int argc, char **argv)
           changeState(state, FIGHTING);
           changeBattleState(battle_state, HERO_SELECT);
         }
+        break;
+      case FIGHTING:
+        if (battle_state == HERO_SELECT && keys[SPACE]) {
+          changeBattleState(battle_state, HERO_ATTACK);
+          break;
+        }
       }
     }
+
 
     //==============================================
     // RENDER
@@ -293,9 +300,8 @@ int main(int argc, char **argv)
           drawHeroFighting(hero);
           drawOpponent(opponent);
           drawHeroSelect(hero, hero_select, font10);
+          break;
         }
-        drawHeroFighting(hero);
-        drawOpponent(opponent);
       }
 
       // FLIP BUFFER========================
