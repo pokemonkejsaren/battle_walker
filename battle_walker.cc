@@ -4,6 +4,8 @@
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include <iostream>
+#include <string>
 #include "hero.hh"
 #include "opponent.hh"
 #include "enums.hh"
@@ -28,9 +30,11 @@ void updateHeroWalking (Hero &hero);
 
 void drawHeroFighting (Hero &hero);
 void drawHeroSelect (Hero &hero, int hero_select, ALLEGRO_FONT *font10);
+int updateHeroAttack (Hero &hero, int attackframe, int hero_speed);
 
 void initOpponent (Opponent &opponent,  ALLEGRO_BITMAP *image);
 void drawOpponent (Opponent &opponent);
+int updateOpponentAttack (Opponent &opponent, int attackframe);
 
 //=================================================
 // MAIN FUNCTION
@@ -53,7 +57,6 @@ int main(int argc, char **argv)
   int gameFPS = 0;
   const int FPS = 60; //#masterrace
 
-  int hero_speed = 4;
 
   //==============================================
   // PRIMITIVE PROJECT VARIABLES
@@ -61,6 +64,9 @@ int main(int argc, char **argv)
   bool keys[] = {false, false, false, false, false, false, false};
   Hero hero;
   Opponent opponent;
+
+  int hero_speed = 4;
+  int attackframe;
 
   //==============================================
   // ALLEGRO VARIABLES
@@ -226,12 +232,14 @@ int main(int argc, char **argv)
       }
       // UPDATE PER STATE=====================
       switch (state) {
+
       case MAINMENU:
         if (keys[SPACE]) {
           initHero(hero_class - 1, hero, hero_image);
           changeState(state, WALKING);
         }
         break;
+
       case WALKING:
         hero.animationSpeed = 1;
         if (keys[UP]) {
@@ -269,14 +277,38 @@ int main(int argc, char **argv)
           changeBattleState(battle_state, HERO_SELECT);
         }
         break;
+
+
       case FIGHTING:
-        if (battle_state == HERO_SELECT && keys[SPACE]) {
-          changeBattleState(battle_state, HERO_ATTACK);
+        switch (battle_state) {
+        case HERO_SELECT:
+          if (keys[SPACE]) {
+            changeBattleState(battle_state, HERO_ATTACK); // alltid attack just nu
+            attackframe = 0;
+          }
+          break;
+
+        case HERO_ATTACK:
+          if (!updateHeroAttack(hero, attackframe, hero_speed)) {
+            changeBattleState(battle_state, OPPONENT_ATTACK);
+            attackframe = 0;
+          }
+          else {
+            attackframe += 1;
+          }
+          break;
+
+        case OPPONENT_ATTACK:
+          if (!updateOpponentAttack(opponent, attackframe)) {
+            changeBattleState(battle_state, HERO_SELECT);
+          }
+          else {
+            attackframe += 1;
+          }
           break;
         }
       }
     }
-
 
     //==============================================
     // RENDER
@@ -287,19 +319,33 @@ int main(int argc, char **argv)
 
       // RENDER PER STATE================
       switch (state) {
+
       case MAINMENU:
         drawHeroClasses(font10);
         al_draw_filled_triangle(40, 30 * hero_class + 5, 45, 30 * hero_class, 40, 30 * hero_class - 5, al_map_rgb(255,0,255));
         break;
+
       case WALKING:
         drawHeroWalking(hero);
         break;
+
       case FIGHTING:
         switch (battle_state) {
+
         case HERO_SELECT:
           drawHeroFighting(hero);
           drawOpponent(opponent);
           drawHeroSelect(hero, hero_select, font10);
+          break;
+
+        case HERO_ATTACK:
+          drawHeroWalking(hero);
+          drawOpponent(opponent);
+          break;
+
+        case OPPONENT_ATTACK:
+          drawHeroFighting(hero);
+          drawOpponent(opponent);
           break;
         }
       }
@@ -343,6 +389,16 @@ void changeBattleState (int &state, int new_state)
 {
   // UPDATE OLD STATE=========================
   switch (state) {
+  case HERO_ATTACK:
+    std::cout << "from hero \n";
+    break;
+  case HERO_SELECT:
+    std::cout << "from selects\n";
+    break;
+  case OPPONENT_ATTACK:
+    std::cout << "from oppo \n";
+    break;
+
   default: break;
   }
 
@@ -350,6 +406,16 @@ void changeBattleState (int &state, int new_state)
 
   // UPDATE NEW STATE==========================
   switch (state) {
+  case HERO_ATTACK:
+    std::cout << "to hero \n";
+    break;
+  case HERO_SELECT:
+    std::cout << "to selects \n";
+    break;
+  case OPPONENT_ATTACK:
+    std::cout << "to oppo \n";
+    break;
+
   default: break;
   }
 }
@@ -465,6 +531,8 @@ void drawHeroWalking (Hero &hero) {
 }
 
 void drawHeroFighting (Hero &hero) {
+  hero.x = 3 * WIDTH / 4;
+  hero.y = HEIGHT / 2;
   int fx = hero.frameWidth + (hero.column - 1) * 3 * hero.frameWidth;
   int fy = (WALK_LEFT * hero.frameHeight) + (hero.row - 1) * 4 * hero.frameHeight;
   al_draw_bitmap_region(hero.image, fx, fy, hero.frameWidth, hero.frameHeight, 3 * WIDTH / 4, HEIGHT / 2, 0);
@@ -511,4 +579,33 @@ void drawHeroSelect (Hero &hero, int hero_select, ALLEGRO_FONT *font10)
   al_draw_textf(font10, al_map_rgb(255,0,0), 30,  HEIGHT - 140 + 2 * draw_height  ,0,"Flee" );
   al_draw_textf(font10, al_map_rgb(255,0,0), 30,  HEIGHT - 140 + 3 * draw_height  ,0,"Meme" );
   al_draw_filled_triangle(15, HEIGHT - 145 + hero_select * draw_height ,25, HEIGHT - 140 + hero_select * draw_height, 15, HEIGHT - 135 + hero_select * draw_height, al_map_rgb(255,0,0));
+}
+
+int updateHeroAttack (Hero &hero, int attackframe, int hero_speed) {
+  hero.animationSpeed = 1;
+  hero.walkingDirection = WALK_LEFT;
+  if (attackframe < 30) {
+    hero.x -= hero_speed;
+  }
+  else if (attackframe < 60) {
+    hero.x += hero_speed;
+    //std::cout << "a ";
+  }
+  else {
+    hero.animationSpeed = 0;
+    return 0;
+    std::cout << "fertjsch";
+  }
+  return 1;
+}
+
+int updateOpponentAttack (Opponent &opponent, int attackframe) {
+  if (attackframe < 60) {
+    opponent.action = DRAGON_BREATH;
+  }
+  else {
+    opponent.action = DRAGON_STAND;
+    return 0;
+  }
+  return 1;
 }
