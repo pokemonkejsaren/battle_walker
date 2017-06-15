@@ -27,14 +27,20 @@ void initHero (int hero_class, Hero &hero, ALLEGRO_BITMAP *image);
 void drawHeroClasses (ALLEGRO_FONT *font10);
 void drawHeroWalking (Hero &hero);
 void updateHeroWalking (Hero &hero);
+void drawMeme (int random, ALLEGRO_FONT *font10);
+void drawBackground (ALLEGRO_BITMAP  *background_image);
 
 void drawHeroFighting (Hero &hero);
 void drawHeroSelect (Hero &hero, int hero_select, ALLEGRO_FONT *font10);
 int updateHeroAttack (Hero &hero, int attackframe, int hero_speed);
+int updateHeroParry (Hero &hero, int attackframe, int hero_speed);
+int updateHeroFlee (Hero &hero, int attackframe, int hero_speed);
+int updateHeroMeme (int attackframe);
 
 void initOpponent (Opponent &opponent,  ALLEGRO_BITMAP *image);
 void drawOpponent (Opponent &opponent);
 int updateOpponentAttack (Opponent &opponent, int attackframe);
+
 
 //=================================================
 // MAIN FUNCTION
@@ -77,6 +83,9 @@ int main(int argc, char **argv)
   ALLEGRO_FONT *font10;
   ALLEGRO_BITMAP *hero_image;
   ALLEGRO_BITMAP *opponent_image;
+  ALLEGRO_BITMAP *background_image;
+  ALLEGRO_BITMAP *foreground_image;
+  ALLEGRO_BITMAP *battle_background_image;
 
   //==============================================
   // ALLEGRO INIT FUNCTIONS
@@ -106,6 +115,9 @@ int main(int argc, char **argv)
   font10 = al_load_font("fonts/PressStart2P.ttf", 10, 0);
   hero_image = al_load_bitmap("graphics/heros.png");
   opponent_image = al_load_bitmap("graphics/dragon.png");
+  background_image = al_load_bitmap("graphics/background.png");
+  foreground_image = al_load_bitmap("graphics/foreground.png");
+  battle_background_image = al_load_bitmap("graphics/battle_background.png");
 
   //==============================================
   // TIMER INIT AND STARTUP EVENT REGISTER
@@ -289,13 +301,46 @@ int main(int argc, char **argv)
           break;
 
         case HERO_ATTACK:
-          if (!updateHeroAttack(hero, attackframe, hero_speed)) {
-            changeBattleState(battle_state, OPPONENT_ATTACK);
-            attackframe = 0;
-          }
-          else {
-            attackframe += 1;
-          }
+          if (hero_select == ATTACK) {
+              if (!updateHeroAttack(hero, attackframe, hero_speed)) {
+                changeBattleState(battle_state, OPPONENT_ATTACK);
+                attackframe = 0;
+              }
+              else {
+                attackframe += 1;
+              }
+            }
+
+            else if (hero_select == PARRY) {
+              if (!updateHeroParry(hero, attackframe, hero_speed)) {
+                changeBattleState(battle_state, OPPONENT_ATTACK);
+                attackframe = 0;
+              }
+              else {
+                attackframe += 1;
+              }
+            }
+
+            else if (hero_select == FLEE) {
+              if (!updateHeroFlee(hero, attackframe, hero_speed)) {
+                changeBattleState(battle_state, OPPONENT_ATTACK);
+                attackframe = 0;
+              }
+              else {
+                attackframe += 1;
+              }
+            }
+
+            else if (hero_select == MEME) {
+              if (!updateHeroMeme(attackframe)) {
+                changeBattleState(battle_state, OPPONENT_ATTACK);
+                attackframe = 0;
+              }
+              else {
+                attackframe += 1;
+              }
+            }
+
           break;
 
         case OPPONENT_ATTACK:
@@ -326,10 +371,13 @@ int main(int argc, char **argv)
         break;
 
       case WALKING:
+        drawBackground(background_image);
         drawHeroWalking(hero);
+        drawBackground(foreground_image);
         break;
 
       case FIGHTING:
+        drawBackground(battle_background_image);
         switch (battle_state) {
 
         case HERO_SELECT:
@@ -341,6 +389,13 @@ int main(int argc, char **argv)
         case HERO_ATTACK:
           drawHeroWalking(hero);
           drawOpponent(opponent);
+          int random_meme;
+          if (attackframe < 1) {
+            random_meme = rand() % 10;
+          }
+          if (hero_select == MEME) {
+            drawMeme(random_meme, font10);
+          }
           break;
 
         case OPPONENT_ATTACK:
@@ -581,7 +636,8 @@ void drawHeroSelect (Hero &hero, int hero_select, ALLEGRO_FONT *font10)
   al_draw_filled_triangle(15, HEIGHT - 145 + hero_select * draw_height ,25, HEIGHT - 140 + hero_select * draw_height, 15, HEIGHT - 135 + hero_select * draw_height, al_map_rgb(255,0,0));
 }
 
-int updateHeroAttack (Hero &hero, int attackframe, int hero_speed) {
+int updateHeroAttack (Hero &hero, int attackframe, int hero_speed)
+{
   hero.animationSpeed = 1;
   hero.walkingDirection = WALK_LEFT;
   if (attackframe < 30) {
@@ -599,7 +655,8 @@ int updateHeroAttack (Hero &hero, int attackframe, int hero_speed) {
   return 1;
 }
 
-int updateOpponentAttack (Opponent &opponent, int attackframe) {
+int updateOpponentAttack (Opponent &opponent, int attackframe)
+{
   if (attackframe < 60) {
     opponent.action = DRAGON_BREATH;
   }
@@ -608,4 +665,98 @@ int updateOpponentAttack (Opponent &opponent, int attackframe) {
     return 0;
   }
   return 1;
+}
+
+int updateHeroParry (Hero &hero, int attackframe, int hero_speed)
+{
+  hero.animationSpeed = 1;
+  if (attackframe < 20) {
+    hero.walkingDirection = WALK_RIGHT;   ;
+    hero.x -= hero_speed;
+  }
+  else if (attackframe < 40) {
+    hero.walkingDirection = WALK_LEFT;
+    hero.x += hero_speed;
+    //std::cout << "a ";
+  }
+  else {
+    hero.walkingDirection = WALK_LEFT;
+    hero.animationSpeed = 0;
+    return 0;
+    std::cout << "fertjsch";
+  }
+  return 1;
+}
+
+int updateHeroFlee (Hero &hero, int attackframe, int hero_speed)
+{
+  hero.animationSpeed = 1;
+  if (attackframe < 20) {
+    hero.walkingDirection = WALK_RIGHT;   ;
+    hero.x += 2 * hero_speed;
+  }
+  else if (attackframe < 100) {
+    hero.walkingDirection = WALK_LEFT;
+    hero.x -= hero_speed / 2;
+    //std::cout << "a ";
+  }
+  else {
+    hero.walkingDirection = WALK_LEFT;
+    hero.animationSpeed = 0;
+    return 0;
+    std::cout << "fertjsch";
+  }
+  return 1;
+}
+
+int updateHeroMeme (int attackframe)
+{
+  if (attackframe < 60) {
+    return 1;
+  }
+  return 0;
+}
+
+void drawMeme (int random, ALLEGRO_FONT *font10)
+{
+  int x_pos = 30;
+  int y_pos = 140;
+  switch (random) {
+  case 0:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"A cat is fine too");
+    return;
+  case 1:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"A leigh widte wailingu");
+    return;
+  case 2:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Yo can tell manns thas de man ho slei korren haffan");
+    return;
+  case 3:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Proprietary software");
+    return;
+  case 4:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Spotsk");
+    return;
+  case 5:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Maski");
+    return;
+  case 6:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Ledsen, Svampbob");
+    return;
+  case 7:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Born lucky");
+    return;
+  case 8:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Lucky to be born");
+    return;
+  case 9:
+    al_draw_textf(font10, al_map_rgb(0,0,255), x_pos,  y_pos ,0,"Ny exotisk form av meme");
+    return;
+  }
+}
+
+void drawBackground (ALLEGRO_BITMAP  *background_image)
+{
+  al_draw_bitmap(background_image, 0, 0, 0);
+  return;
 }
