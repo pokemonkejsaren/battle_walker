@@ -4,8 +4,12 @@
 #include <allegro5/allegro_primitives.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_ttf.h>
+#include <allegro5/allegro_audio.h>
+#include <allegro5/allegro_acodec.h>
+
 #include <iostream>
 #include <string>
+
 #include "hero.hh"
 #include "opponent.hh"
 #include "enums.hh"
@@ -81,11 +85,23 @@ int main(int argc, char **argv)
   ALLEGRO_EVENT_QUEUE *event_queue = NULL;
   ALLEGRO_TIMER *timer;
   ALLEGRO_FONT *font10;
+
+  // IMAGES ======================================
   ALLEGRO_BITMAP *hero_image;
   ALLEGRO_BITMAP *opponent_image;
   ALLEGRO_BITMAP *background_image;
   ALLEGRO_BITMAP *foreground_image;
   ALLEGRO_BITMAP *battle_background_image;
+
+  // SOUNDS ======================================
+  ALLEGRO_SAMPLE *sample_1 = NULL;
+  ALLEGRO_SAMPLE *sample_2 = NULL;
+  ALLEGRO_SAMPLE *sample_3 = NULL;
+  ALLEGRO_SAMPLE *sample_4 = NULL;
+  ALLEGRO_SAMPLE_INSTANCE *instance_1 = NULL;
+  ALLEGRO_SAMPLE_INSTANCE *instance_2 = NULL;
+  ALLEGRO_SAMPLE_INSTANCE *instance_3 = NULL;
+  ALLEGRO_SAMPLE_INSTANCE *instance_4 = NULL;
 
   //==============================================
   // ALLEGRO INIT FUNCTIONS
@@ -107,12 +123,36 @@ int main(int argc, char **argv)
   al_init_font_addon();
   al_init_ttf_addon();
   al_init_primitives_addon();
+  al_install_audio();
+  al_init_acodec_addon();
 
 
   //==============================================
   // PROJECT INIT
   //==============================================
   font10 = al_load_font("fonts/PressStart2P.ttf", 10, 0);
+  al_reserve_samples(10);
+
+  // LOAD SOUNDS =================================
+  sample_1 = al_load_sample("sounds/song.wav");
+  sample_2 = al_load_sample("sounds/blaster.wav");
+  sample_3 = al_load_sample("sounds/shot.wav");
+  sample_4 = al_load_sample("sounds/bell.wav");
+
+  instance_1 = al_create_sample_instance(sample_1);
+  instance_2 = al_create_sample_instance(sample_2);
+  instance_3 = al_create_sample_instance(sample_3);
+  instance_4 = al_create_sample_instance(sample_4);
+
+  al_set_sample_instance_playmode(instance_1, ALLEGRO_PLAYMODE_LOOP); // gör att bakgfrundslåten spelas loopat lmao
+
+  al_attach_sample_instance_to_mixer(instance_1, al_get_default_mixer());
+  al_attach_sample_instance_to_mixer(instance_2, al_get_default_mixer());
+  al_attach_sample_instance_to_mixer(instance_3, al_get_default_mixer());
+  al_attach_sample_instance_to_mixer(instance_4, al_get_default_mixer());
+
+
+  // LOAD IMAGES =================================
   hero_image = al_load_bitmap("graphics/heros.png");
   opponent_image = al_load_bitmap("graphics/dragon.png");
   background_image = al_load_bitmap("graphics/background.png");
@@ -130,8 +170,9 @@ int main(int argc, char **argv)
 
   srand(time(NULL)); // seeds random after time
   changeState(state, MAINMENU); // set default state
-    al_start_timer(timer);
+  al_start_timer(timer);
   gameTime = al_current_time();
+  al_play_sample_instance(instance_1);
   while (!done) {
     ALLEGRO_EVENT ev;
     al_wait_for_event(event_queue, &ev);
@@ -356,13 +397,27 @@ int main(int argc, char **argv)
     }
 
     //==============================================
+    // SOUND PLAYER
+    //==============================================
+
+    // PLAY SOUND PER STATE ========================
+    switch (state) {
+    case WALKING:
+      if (keys[UP] || keys[DOWN] || keys[LEFT] || keys[RIGHT]) {
+        al_play_sample_instance(instance_2);
+      }
+      break;
+    }
+
+
+    //==============================================
     // RENDER
     //==============================================
     if (render && al_is_event_queue_empty(event_queue)) {
       render = false;
       al_draw_textf(font10, al_map_rgb(255, 0, 255), 5, 5, 0, "FPS: %i", gameFPS);	//display FPS on screen
 
-      // RENDER PER STATE================
+      // RENDER PER STATE ==========================
       switch (state) {
 
       case MAINMENU:
